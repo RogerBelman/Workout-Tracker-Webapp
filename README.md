@@ -4,7 +4,7 @@ This repository contains a full-stack workout tracking application built with a 
 
 ## Features
 
-For the Docker rehearsal and pull-request checks, see [Production workflow](docs/production-workflow.md).
+For local Docker previews, pull-request checks, image publishing, production releases, and rollback, see [Production workflow](docs/production-workflow.md).
 
 - Create, list, filter, update, and delete exercises through the REST API.
 - Save permanent exercise instructions for setup and technique, visible in the library and workout details.
@@ -24,6 +24,7 @@ For the Docker rehearsal and pull-request checks, see [Production workflow](docs
 - Switch strength weights and volume between pounds and kilograms throughout the browser app.
 - Export all training data to a portable JSON backup and validate imported backups before replacing current data.
 - Register accounts and use server-managed login sessions with BCrypt-hashed passwords.
+- Sign in with a username or email and verify email ownership through one-time links, with resend controls in Settings.
 - Recover forgotten passwords through neutral email requests and expiring one-time reset links.
 - Limit repeated login, registration, and password-recovery requests per client.
 - Keep each account's exercises, workouts, templates, goals, progress, and backups separate.
@@ -32,6 +33,7 @@ For the Docker rehearsal and pull-request checks, see [Production workflow](docs
 - Run PostgreSQL locally with Docker or connect Spring Boot to Neon.
 - Apply versioned schema changes automatically with Flyway.
 - Test backend behavior with JUnit and frontend utilities and interactions with Node, Vitest, Testing Library, and jsdom.
+- Run automated CI checks, publish versioned frontend and backend container images, and deploy or roll back through the production approval workflow.
 
 ## Technology Stack
 
@@ -63,10 +65,12 @@ Routes:
 
 | Path | Page |
 | --- | --- |
+| `/` | Public landing page |
 | `/login` | Sign in or create an account |
 | `/forgot-password` | Request a password reset link |
 | `/reset-password?token=...` | Choose a new password from a one-time link |
-| `/` | Dashboard |
+| `/verify-email?token=...` | Confirm email ownership through a one-time link |
+| `/dashboard` | Dashboard |
 | `/progress` | Exercise Progress |
 | `/exercises` | Exercise Library |
 | `/workouts` | Workouts: history and inline creation |
@@ -79,11 +83,11 @@ The Dashboard shows a Monday–Sunday calendar with previous/next week controls 
 
 The Weight units control on the Settings page switches strength entry, totals, goals, history, and charts between pounds and kilograms. PostgreSQL stores pounds as the canonical value; the frontend converts values when reading and submitting them. The selected display unit is saved to the signed-in account so it follows the user across browsers and devices.
 
-The browser restores the signed-in account from its server session when the app loads. Signed-out visitors are sent to the Login page, and a successful login returns them to the page they originally requested. Registration creates the account and signs in immediately. The footer displays the current account alongside clearly labeled Settings and Sign Out controls, keeping the application header focused on navigation.
+The browser restores the signed-in account from its server session when the app loads. Signed-out visitors requesting a protected app page are sent to the Login page, and a successful login returns them to the page they originally requested. The landing, login, password-recovery, and email-verification pages are public. Registration creates the account and signs in immediately. The footer displays the current account alongside clearly labeled Settings and Sign Out controls, keeping the application header focused on navigation.
 
 The Settings page manages the recovery email and downloads exercises, workouts, strength sets, cardio entries, templates, and goals as a versioned JSON snapshot. Import validates the complete snapshot first and then replaces the current dataset in one database transaction. Invalid files leave existing data unchanged. Password changes, password resets, and account deletion end every active session for the account. Account deletion removes that account and its owned training data in one transaction. Password fields include an explicit Show or Hide control.
 
-Exercise defaults are shared wherever a library exercise is used. Ranges need both positive bounds (equal bounds are allowed); cardio minutes support two decimal places. Changing defaults also changes the guidance shown in past workouts, while recorded sets and cardio entries remain unchanged. Backup exports use version 2 to preserve these fields; imports accept both version 1 and version 2.
+Exercise defaults are shared wherever a library exercise is used. Strength rep ranges need both positive bounds, with the minimum no greater than the maximum. Cardio duration targets allow a minimum alone, a maximum alone, or both, from 0.01 to 99999.99 minutes with up to two decimal places. When both duration bounds are supplied, the minimum must not exceed the maximum. Changing defaults also changes the guidance shown in past workouts, while recorded sets and cardio entries remain unchanged. Backup exports use version 2 to preserve these fields; imports accept both version 1 and version 2.
 
 The Workout Templates page can create a reusable routine directly or save one from an existing workout. After creating a template, add exercises from the library, arrange their order, and start a workout with empty performance entries.
 
@@ -153,7 +157,7 @@ http://127.0.0.1:5173
 ## Prerequisites
 
 - Java 21 or newer
-- Node.js 20 or newer
+- Node.js 24 (matches CI and Docker builds)
 - Docker Desktop with Docker Compose
 
 ## Run Locally
@@ -634,4 +638,3 @@ The required `-Username` must identify an existing registered account. The scrip
 - Add scheduled routines and calendar planning based on workout templates.
 - Expand progress analytics with estimated one-rep max and training-frequency trends.
 - Refine the responsive UI, accessibility, and overall interaction design.
-- Deploy the frontend and backend with Neon as the production database and add automated deployment checks.
